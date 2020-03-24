@@ -1288,7 +1288,8 @@ class GLM(base.LikelihoodModel):
         return result
 
     def fit_regularized_constrained(self, method="elastic_net", alpha=0.,
-                        start_params=None, refit=False, param_limits = None, **kwargs):
+                        start_params=None, refit=False, param_limits = None, 
+                        A_constr=None, b_constr=None, **kwargs):
         r"""
         Return a regularized fit to a linear regression model.
 
@@ -1307,6 +1308,10 @@ class GLM(base.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        A_constr: array-like
+            The matrix for linear constraint `A @ params <= b`
+        b_constr: array-like
+            The right-hand-side vector for linear constraint `A @ params <= b`.
         **kwargs
             Additional keyword arguments used when fitting the model.
 
@@ -1361,6 +1366,8 @@ class GLM(base.LikelihoodModel):
                                 start_params=start_params,
                                 refit=refit,
                                 param_limits=param_limits,
+                                A_constr=A_constr,
+                                b_constr=b_constr,
                                 **defaults)
 
         self.mu = self.predict(result.params)

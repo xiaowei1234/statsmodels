@@ -2,6 +2,7 @@ import numpy as np
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.base.constraint import ConstraintProjector
 
 """
 Elastic net regularization.
@@ -266,7 +267,8 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 def fit_elasticnet_constrained(model, method="coord_descent", maxiter=100,
                    alpha=0., L1_wt=1., start_params=None, cnvrg_tol=1e-7,
                    zero_tol=1e-8, refit=False, check_step=True,
-                   loglike_kwds=None, score_kwds=None, hess_kwds=None, param_limits = None):
+                   loglike_kwds=None, score_kwds=None, hess_kwds=None,
+                   param_limits = None, A_constr=None, b_constr=None):
     """
     Return an elastic net regularized fit to a regression model.
 
@@ -311,6 +313,10 @@ def fit_elasticnet_constrained(model, method="coord_descent", maxiter=100,
         Keyword arguments for the score function.
     hess_kwds : dict-like or None
         Keyword arguments for the Hessian function.
+    A_constr: array-like
+        The matrix for linear constraint `A @ params <= b`
+    b_constr: array-like
+        The right-hand-side vector for linear constraint `A @ params <= b`.
 
     Returns
     -------
@@ -369,6 +375,12 @@ def fit_elasticnet_constrained(model, method="coord_descent", maxiter=100,
         _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
         for k in range(k_exog)]
 
+    # set up constraint enforcement if constraint is provided
+    if A_constr is not None:
+        x_min = [l[0] for l in param_limits]
+        x_max = [l[1] for l in param_limits]
+        proj = ConstraintProjector(x_min, x_max, A_constr, b_constr)
+
     for itr in range(maxiter):
 
         # Sweep through the parameters
@@ -408,6 +420,9 @@ def fit_elasticnet_constrained(model, method="coord_descent", maxiter=100,
             if itr > 0 and np.abs(params[k]) < zero_tol:
                 params_zero[k] = True
                 params[k] = 0.
+        if A_constr is not None:
+            # enforce the constraint
+            params = proj.project(params)
 
         # Check for convergence
         pchange = np.max(np.abs(params - params_save))
