@@ -4,6 +4,7 @@ cython>=0.29
 # run
 matplotlib>=2.2
 cvxopt
+cvxpy
 
 # test
 pytest

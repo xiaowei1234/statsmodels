@@ -422,6 +422,7 @@ def fit_elasticnet_constrained(model, method="coord_descent", maxiter=100,
                 params[k] = 0.
         if A_constr is not None:
             # enforce the constraint
+            # TODO: can this interfere with the way active set is defined?
             params = proj.project(params)
 
         # Check for convergence
