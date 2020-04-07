@@ -1288,7 +1288,8 @@ class GLM(base.LikelihoodModel):
         return result
 
     def fit_regularized_constrained(self, method="elastic_net", alpha=0.,
-                        start_params=None, refit=False, param_limits = None, **kwargs):
+                        start_params=None, refit=False, param_limits = None, 
+                        A_constr=None, b_constr=None, **kwargs):
         r"""
         Return a regularized fit to a linear regression model.
 
@@ -1307,6 +1308,10 @@ class GLM(base.LikelihoodModel):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        A_constr: array-like
+            The matrix for linear constraint `A @ params <= b`
+        b_constr: array-like
+            The right-hand-side vector for linear constraint `A @ params <= b`.
         **kwargs
             Additional keyword arguments used when fitting the model.
 
@@ -1345,7 +1350,9 @@ class GLM(base.LikelihoodModel):
         """
 
         if kwargs.get("L1_wt", 1) == 0:
-            return self._fit_ridge(alpha, start_params)
+            maxiter = kwargs.get('maxiter', 10000)
+            return self._fit_ridge(alpha, start_params, param_limits, 
+                        A_constr, b_constr, maxiter=maxiter)
 
         from statsmodels.base.elastic_net import fit_elasticnet_constrained
 
@@ -1361,6 +1368,8 @@ class GLM(base.LikelihoodModel):
                                 start_params=start_params,
                                 refit=refit,
                                 param_limits=param_limits,
+                                A_constr=A_constr,
+                                b_constr=b_constr,
                                 **defaults)
 
         self.mu = self.predict(result.params)
@@ -1368,22 +1377,39 @@ class GLM(base.LikelihoodModel):
 
         return result
 
-    def _fit_ridge(self, alpha, start_params, method="newton-cg"):
+    def _fit_ridge(self, alpha, start_params, param_limits=None, 
+                        A_constr=None, b_constr=None, method=None, maxiter=1000):
+        from scipy.optimize import minimize, LinearConstraint, Bounds
+        from statsmodels.base.elastic_net import (RegularizedResults,
+            RegularizedResultsWrapper)
+
+        if method is None:
+            if (param_limits is None) and (A_constr is None):
+                method = 'Newton-CG'
+            else:
+                method = 'SLSQP'
+                
+        if A_constr is None:
+            constr = ()
+        else:
+            constr = LinearConstraint(A_constr, -np.inf, b_constr)
+
+        if param_limits is None:
+            bounds = None
+        else:
+            bounds = Bounds([x[0] for x in param_limits], [x[1] for x in param_limits])
 
         if start_params is None:
             start_params = np.zeros(self.exog.shape[1])
 
         def fun(x):
-            return -(self.loglike(x) / self.nobs - alpha * np.sum(x**2) / 2)
+            return -(self.loglike(x) / self.nobs - np.sum(alpha * (x**2)) / 2)
 
         def grad(x):
             return -(self.score(x) / self.nobs - alpha * x)
-
-        from scipy.optimize import minimize
-        from statsmodels.base.elastic_net import (RegularizedResults,
-            RegularizedResultsWrapper)
-
-        mr = minimize(fun, start_params, jac=grad, method=method)
+            
+        mr = minimize(fun, start_params, jac=grad, method=method, bounds=bounds,
+            constraints=constr, options={'maxiter':maxiter})
         params = mr.x
 
         if not mr.success:

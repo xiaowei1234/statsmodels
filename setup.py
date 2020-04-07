@@ -62,6 +62,7 @@ for key in SETUP_REQUIREMENTS:
 INSTALL_REQUIREMENTS = SETUP_REQUIREMENTS.copy()
 INSTALL_REQUIREMENTS.update({'pandas': '0.21',  # released October 2017
                              'patsy': '0.5',  # released January 2018
+                             'cvxpy': '1.0.28', # released February 2020
                              })
 
 CYTHON_MIN_VER = '0.29'  # released November 2018
@@ -322,7 +323,7 @@ class BinaryDistribution(Distribution):
     def is_pure(self):
         return False
 
-
+print(f'INSTALL_REQUIRES={INSTALL_REQUIRES}')
 setup(name=DISTNAME,
       version=versioneer.get_version(),
       maintainer=MAINTAINER,
