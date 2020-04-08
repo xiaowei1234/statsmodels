@@ -1289,7 +1289,7 @@ class GLM(base.LikelihoodModel):
 
     def fit_regularized_constrained(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, param_limits = None, 
-                        A_constr=None, b_constr=None, **kwargs):
+                        A_constr=None, b_constr=None, verbose=False, **kwargs):
         r"""
         Return a regularized fit to a linear regression model.
 
@@ -1352,8 +1352,9 @@ class GLM(base.LikelihoodModel):
         if kwargs.get("L1_wt", 1) == 0:
             maxiter = kwargs.get('maxiter', 10000)
             ftol = kwargs.get('ftol', 1e-10)
+            disp = verbose
             return self._fit_ridge(alpha, start_params, param_limits, 
-                        A_constr, b_constr, maxiter=maxiter, ftol=ftol)
+                        A_constr, b_constr, maxiter=maxiter, ftol=ftol, disp=disp)
 
         from statsmodels.base.elastic_net import fit_elasticnet_constrained
 
@@ -1363,6 +1364,7 @@ class GLM(base.LikelihoodModel):
         defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10,
                     "zero_tol": 1e-10}
         defaults.update(kwargs)
+        defaults.pop('ftol', None) # remove the argument which is only used for ridge
 
         result = fit_elasticnet_constrained(self, method=method,
                                 alpha=alpha,
@@ -1371,6 +1373,7 @@ class GLM(base.LikelihoodModel):
                                 param_limits=param_limits,
                                 A_constr=A_constr,
                                 b_constr=b_constr,
+                                verbose=verbose,
                                 **defaults)
 
         self.mu = self.predict(result.params)
@@ -1379,7 +1382,8 @@ class GLM(base.LikelihoodModel):
         return result
 
     def _fit_ridge(self, alpha, start_params, param_limits=None, 
-                        A_constr=None, b_constr=None, method=None, maxiter=10000, ftol=1e-10):
+                        A_constr=None, b_constr=None, method=None,
+                        maxiter=10000, ftol=1e-10, disp=0):
         from scipy.optimize import minimize, LinearConstraint, Bounds
         from statsmodels.base.elastic_net import (RegularizedResults,
             RegularizedResultsWrapper)
@@ -1410,7 +1414,7 @@ class GLM(base.LikelihoodModel):
             return -(self.score(x) / self.nobs - alpha * x)
             
         mr = minimize(fun, start_params, jac=grad, method=method, bounds=bounds,
-            constraints=constr, options={'maxiter':maxiter, 'ftol': ftol})
+            constraints=constr, options={'maxiter':maxiter, 'ftol': ftol, 'disp': disp})
         params = mr.x
 
         if not mr.success:

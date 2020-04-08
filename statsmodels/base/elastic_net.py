@@ -268,7 +268,8 @@ def fit_elasticnet_constrained(model, method="coord_descent", maxiter=100,
                    alpha=0., L1_wt=1., start_params=None, cnvrg_tol=1e-7,
                    zero_tol=1e-8, refit=False, check_step=True,
                    loglike_kwds=None, score_kwds=None, hess_kwds=None,
-                   param_limits = None, A_constr=None, b_constr=None):
+                   param_limits = None, A_constr=None, b_constr=None,
+                   verbose=False):
     """
     Return an elastic net regularized fit to a regression model.
 
@@ -429,8 +430,8 @@ def fit_elasticnet_constrained(model, method="coord_descent", maxiter=100,
         pchange = np.max(np.abs(params - params_save))
         if pchange < cnvrg_tol:
             break
-
-    print(f'Elastic Net done after {itr}/{maxiter} iterations. pchange={pchange:0.2e} (cnvrg_tol={cnvrg_tol:0.2e})')
+    if verbose:
+        print(f'Elastic Net done after {itr}/{maxiter} iterations. pchange={pchange:0.2e} (cnvrg_tol={cnvrg_tol:0.2e})')
 
     # Set approximate zero coefficients to be exactly zero
     params[np.abs(params) < zero_tol] = 0
