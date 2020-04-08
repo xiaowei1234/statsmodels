@@ -430,6 +430,8 @@ def fit_elasticnet_constrained(model, method="coord_descent", maxiter=100,
         if pchange < cnvrg_tol:
             break
 
+    print(f'Elastic Net done after {itr}/{maxiter} iterations. pchange={pchange:0.2e} (cnvrg_tol={cnvrg_tol:0.2e})')
+
     # Set approximate zero coefficients to be exactly zero
     params[np.abs(params) < zero_tol] = 0
 

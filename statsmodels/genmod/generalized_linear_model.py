@@ -1351,8 +1351,9 @@ class GLM(base.LikelihoodModel):
 
         if kwargs.get("L1_wt", 1) == 0:
             maxiter = kwargs.get('maxiter', 10000)
+            ftol = kwargs.get('ftol', 1e-10)
             return self._fit_ridge(alpha, start_params, param_limits, 
-                        A_constr, b_constr, maxiter=maxiter)
+                        A_constr, b_constr, maxiter=maxiter, ftol=ftol)
 
         from statsmodels.base.elastic_net import fit_elasticnet_constrained
 
@@ -1378,7 +1379,7 @@ class GLM(base.LikelihoodModel):
         return result
 
     def _fit_ridge(self, alpha, start_params, param_limits=None, 
-                        A_constr=None, b_constr=None, method=None, maxiter=1000):
+                        A_constr=None, b_constr=None, method=None, maxiter=10000, ftol=1e-10):
         from scipy.optimize import minimize, LinearConstraint, Bounds
         from statsmodels.base.elastic_net import (RegularizedResults,
             RegularizedResultsWrapper)
@@ -1409,7 +1410,7 @@ class GLM(base.LikelihoodModel):
             return -(self.score(x) / self.nobs - alpha * x)
             
         mr = minimize(fun, start_params, jac=grad, method=method, bounds=bounds,
-            constraints=constr, options={'maxiter':maxiter})
+            constraints=constr, options={'maxiter':maxiter, 'ftol': ftol})
         params = mr.x
 
         if not mr.success:
