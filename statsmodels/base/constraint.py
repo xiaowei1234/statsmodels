@@ -21,7 +21,7 @@ class ConstraintProjector():
         # make sure that all inputs have appropriate dimensions
         if len(x_min) != len(x_max):
             raise ValueError(f'len(x_min)={len(x_min)}!={len(x_max)}=len(x_max)')
-        if A.shape[1] == len(x_min):
+        if A.shape[1] != len(x_min):
             raise ValueError(f'A.shape[1]={A.shape[1]} incompatible with len(x_min)={len(x_min)}')
         if len(b) != A.shape[0]:
             raise ValueError(f'len(b)={len(b)} incompatible with A.shape[0]={A.shape[0]}')
