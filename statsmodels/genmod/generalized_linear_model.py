@@ -1107,7 +1107,7 @@ class GLM(base.LikelihoodModel):
                                     scale,
                                     cov_type=cov_type, cov_kwds=cov_kwds,
                                     use_t=use_t)
-
+        glm_results.cov_p = cov_p
         # TODO: iteration count is not always available
         history = {'iteration': 0}
         if full_output:
@@ -1287,9 +1287,32 @@ class GLM(base.LikelihoodModel):
 
         return result
 
+    def standard_errors(self, params, sandwich=False):
+        """
+        result: glm result
+        sandwich: whether to produce robust SE
+        Returns hessian matrix, covariance matrix of coefficients, and standard errors
+        -------
+        """
+        hessian_mat = self.hessian(params, observed=True)
+        try:
+            cov_p = np.linalg.inv(-hessian_mat) / self.scale
+            if sandwich:
+                diagonal = np.diag(np.square(self.data.endog - self.mu))
+                meat = self.exog.T @ diagonal @ self.exog
+                cov_p = cov_p @ meat @ cov_p
+            se = np.sqrt(cov_p)
+        except LinAlgError:
+            from warnings import warn
+            warn('Inverting hessian failed, no bse or cov_params '
+                 'available', HessianInversionWarning)
+            cov_p = None
+            se = None
+        return hessian_mat, cov_p, se
+
     def fit_regularized_constrained(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, param_limits = None, 
-                        A_constr=None, b_constr=None, verbose=False, **kwargs):
+                        A_constr=None, b_constr=None, verbose=False, sandwich=False, **kwargs):
         r"""
         Return a regularized fit to a linear regression model.
 
@@ -1312,6 +1335,7 @@ class GLM(base.LikelihoodModel):
             The matrix for linear constraint `A @ params <= b`
         b_constr: array-like
             The right-hand-side vector for linear constraint `A @ params <= b`.
+        sandwich: whether to return standard errors using sandwich method to correct for overdispersion
         **kwargs
             Additional keyword arguments used when fitting the model.
 
@@ -1378,7 +1402,7 @@ class GLM(base.LikelihoodModel):
 
         self.mu = self.predict(result.params)
         self.scale = self.estimate_scale(self.mu)
-
+        result.hessian, result.cov_p, result.se = self.standard_errors(result.params, sandwich=sandwich)
         return result
 
     def _fit_ridge(self, alpha, start_params, param_limits=None, 
