@@ -14,7 +14,8 @@ docs/source/datasets/statsmodels.datasets.*
 docs/source/savefig
 docs/gettingstarted_0.png
 examples/executed
-
+adhocs/
+venv/
 # generated c source and built extensions
 *.c
 *.so

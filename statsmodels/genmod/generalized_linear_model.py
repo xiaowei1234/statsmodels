@@ -1296,6 +1296,7 @@ class GLM(base.LikelihoodModel):
         """
         hessian_mat = self.hessian(params, observed=True)
         try:
+
             cov_p = np.linalg.inv(-hessian_mat) / self.scale
             if sandwich:
                 diagonal = np.diag(np.square(self.data.endog - self.mu))
@@ -1377,8 +1378,12 @@ class GLM(base.LikelihoodModel):
             maxiter = kwargs.get('maxiter', 10000)
             ftol = kwargs.get('ftol', 1e-10)
             disp = verbose
-            return self._fit_ridge(alpha, start_params, param_limits, 
+            result = self._fit_ridge(alpha, start_params, param_limits, 
                         A_constr, b_constr, maxiter=maxiter, ftol=ftol, disp=disp)
+            self.mu = self.predict(result.params)
+            self.scale = self.estimate_scale(self.mu)
+            result.hessian, result.cov_p, result.se = self.standard_errors(result.params, sandwich=sandwich)
+            return result
 
         from statsmodels.base.elastic_net import fit_elasticnet_constrained
 
@@ -1449,7 +1454,7 @@ class GLM(base.LikelihoodModel):
 
         results = RegularizedResults(self, params)
         results = RegularizedResultsWrapper(results)
-
+        results.params = params
         return results
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
